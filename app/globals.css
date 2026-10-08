@@ -961,6 +961,28 @@ img {
   height: 48px;
   border-radius: 16px;
 }
+.share-help {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.share-help p + p {
+  margin-top: 8px;
+}
+.share-help input {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.share-help .button {
+  margin-top: 12px;
+}
 .yellow {
   background: #feea57;
 }
@@ -1274,8 +1296,92 @@ img {
   .entry {
     padding-top: 52px;
   }
+  .entry,
+  .loading {
+    height: calc(100svh - env(safe-area-inset-top, 0px));
+    min-height: min-content;
+    padding-bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+    --luck-scale: 0.8;
+    --entry-art-height: 312px;
+    --loading-art-height: 272px;
+  }
+  .entry > .pill,
+  .entry h1,
+  .entry > p,
+  .loading-title,
+  .entry-bottom,
+  .loading-bottom {
+    flex-shrink: 0;
+  }
+  .luck-stage {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    margin-block: 8px;
+  }
+  .entry .luck-stage {
+    min-height: var(--entry-art-height);
+  }
+  .loading .luck-stage {
+    min-height: var(--loading-art-height);
+  }
+  .entry-orbit,
+  .reveal-orbit {
+    position: absolute;
+    margin: 0;
+    left: 50%;
+    top: 50%;
+    max-width: none;
+    transform: translate(-50%, -50%) scale(var(--luck-scale));
+  }
+  .loading-title {
+    margin-top: 0;
+  }
+  .entry-bottom,
+  .loading-bottom {
+    margin-top: 0;
+    padding-top: 0;
+  }
   .demo-banner {
     top: 5px;
+  }
+}
+@media (max-width: 600px) and (max-height: 740px) {
+  .entry,
+  .loading {
+    --luck-scale: 0.65;
+    --entry-art-height: 253.5px;
+    --loading-art-height: 221px;
+  }
+}
+@media (max-width: 600px) and (max-height: 650px) {
+  .entry,
+  .loading {
+    --luck-scale: 0.55;
+    --entry-art-height: 214.5px;
+    --loading-art-height: 187px;
+  }
+  .loading .topbar {
+    margin-bottom: 8px;
+  }
+  .loading-title h1 {
+    margin-block: 8px;
+    font-size: 28px;
+  }
+  .loading-title .subtitle {
+    font-size: 14px;
+  }
+  .loading-bottom > .row,
+  .loading-bottom .footer-note {
+    margin-top: 10px;
+  }
+}
+@media (max-width: 600px) and (max-height: 550px) {
+  .entry,
+  .loading {
+    --luck-scale: 0.45;
+    --entry-art-height: 175.5px;
+    --loading-art-height: 153px;
   }
 }
 @media (max-width: 360px) {

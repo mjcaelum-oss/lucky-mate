@@ -66,4 +66,6 @@ rtk proxy npm run seed
 
 이미지는 `public/images`에서 관리한다. [이미지 교체 안내](public/images/README.md). 피그마 S00~S05의 원본 PNG·SVG를 `public/images/figma`에 저장해 사용하며 미제공 키캡 사진은 안내 문구로 유지한다. S02 아이콘은 `icon-money.png`, `icon-love.png`, `icon-work.png`, `icon-luck.png`로 교체할 수 있다. 초기 선택은 없으며 항목 선택 후 확인 버튼을 표시한다. S03에서 돌아가면 진행 중인 조회를 취소하고 늦은 응답을 무시한다.
 
-공유는 디자인과 같은 전체 화면으로 표시한다. 카카오톡/스토리 버튼은 기기의 Web Share API를 열고, 미지원 기기에서는 링크를 복사한다. 전용 앱 SDK 연동은 없다. 이미지 카드는 브라우저 Canvas로 저장하며 제공된 원본 클로버를 사용한다. 로그 저장 실패는 핵심 화면 조회를 차단하지 않도록 운영에서 모니터링한다.
+공유는 전체 화면으로 표시하며 링크와 이미지를 먼저 준비한 뒤 버튼을 활성화한다. 카카오톡은 공식 SDK로 운세·클로버 이미지·결과 링크를 보낸다. `.env.local`과 Vercel Production/Preview에 `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY`를 설정하고, 카카오 Developers 앱의 JavaScript SDK 도메인 및 제품 링크 웹 도메인에 운영 주소를 등록한다. 이 값은 브라우저용 JavaScript 키이며 Vercel에서는 공개 Config 유형으로 등록한다. Admin 키나 REST API 키를 입력하지 않는다. 로컬에서 전용 공유창을 테스트하려면 로컬 주소도 카카오 앱에 등록해야 한다. [카카오톡 공유 설정 문서](https://developers.kakao.com/docs/ko/kakaotalk-share/js-link).
+
+카카오 SDK가 없거나 로드되지 않으면 기기 공유 메뉴를 열고, 공유 메뉴 미지원 기기에서는 링크를 복사한다. 인스타그램에는 1080×1920 PNG 운세 카드를 기기 이미지 공유 메뉴로 전달하며 사용자가 Instagram을 선택한다. 웹에서는 Instagram 스토리 작성 화면을 강제로 지정할 수 없다. 앱이 목록에 없거나 파일 공유를 지원하지 않는 경우 이미지 저장 후 직접 스토리에 추가하고, 결과 URL은 링크 스티커에 붙여넣는다. 복사가 차단돼도 선택 가능한 결과 URL을 표시한다. [Web Share 지원 및 제약](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share). 로그 저장 실패는 핵심 화면 조회를 차단하지 않도록 운영에서 모니터링한다.

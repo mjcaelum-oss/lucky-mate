@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
+import Script from 'next/script';
+import { downloadImage, fortuneImage } from '@/lib/sharing';
 import {
   categories,
   colors,
@@ -78,7 +80,12 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
     [shareOpen, setShareOpen] = useState(false),
     [shareToken, setShareToken] = useState(path[0] === 'share' ? path[1] : ''),
     [busy, setBusy] = useState(false),
-    [demo, setDemo] = useState(localDemo);
+    [demo, setDemo] = useState(localDemo),
+    [shareLink, setShareLink] = useState<{ resultId: string; url: string } | null>(null),
+    [shareCard, setShareCard] = useState<{ resultId: string; file: File } | null>(null),
+    [shareError, setShareError] = useState(''),
+    [imageError, setImageError] = useState(''),
+    [shareAttempt, setShareAttempt] = useState(0);
   const started = useRef(false),
     fortuneRequest = useRef<AbortController | null>(null),
     retry = useRef<() => void>(() => location.reload()),
@@ -233,89 +240,110 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
     if (url && /^https:\/\//.test(url)) location.assign(url);
     else notify('구매 링크를 준비하고 있어요. 조금만 기다려주세요.');
   };
-  const createShare = async () => {
-    if (!result) return '';
-    const data = await api('share', { result_id: result.id });
-    setShareToken(data.token);
-    return `${location.origin}/share/${data.token}`;
+  const sharing = screen === 'shared' || shareOpen;
+  useEffect(() => {
+    if (!sharing || !result) return;
+    let cancelled = false;
+    setShareLink(null);
+    setShareCard(null);
+    setShareError('');
+    setImageError('');
+    // Prepare before clicking: network/image work can consume mobile user activation.
+    const link = shareToken
+      ? Promise.resolve({ token: shareToken })
+      : api('share', { result_id: result.id });
+    void link
+      .then((data) => {
+        if (cancelled) return;
+        setShareToken(data.token);
+        setShareLink({ resultId: result.id, url: `${location.origin}/share/${data.token}` });
+      })
+      .catch(() => {
+        if (!cancelled) setShareError('공유 링크를 준비하지 못했어요.');
+      });
+    void fortuneImage(result)
+      .then((file) => {
+        if (!cancelled) setShareCard({ resultId: result.id, file });
+      })
+      .catch(() => {
+        if (!cancelled) setImageError('공유 이미지를 준비하지 못했어요.');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // The token is cached by this effect; updating it must not restart preparation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharing, result, shareAttempt]);
+  const linkReady = !!result && shareLink?.resultId === result.id;
+  const imageReady = !!result && shareCard?.resultId === result.id;
+  const copy = async () => {
+    if (!linkReady) return;
+    try {
+      await navigator.clipboard.writeText(shareLink!.url);
+      notify('행운 링크를 복사했어요. 카카오톡이나 스토리 링크 스티커에 붙여넣으세요.');
+    } catch {
+      notify('자동 복사가 차단됐어요. 아래 공유 링크를 길게 눌러 복사해주세요.');
+    }
   };
-  const shareResult = async () => {
-    if (busy) return;
+  const shareKakao = async () => {
+    if (busy || !linkReady || !result) return;
+    const url = shareLink!.url;
+    const key = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
     setBusy(true);
     try {
-      const url = await createShare();
-      if (typeof navigator.share === 'function') {
-        try {
-          await navigator.share({
-            title: `오늘의 ${labels[result!.category]}운 · Lucky Mate`,
-            text: result!.content.message,
-            url,
-          });
-        } catch (e) {
-          if (e instanceof Error && e.name !== 'AbortError') setShareOpen(true);
-        }
+      if (key && window.Kakao) {
+        if (!window.Kakao.isInitialized()) window.Kakao.init(key);
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: `오늘의 ${labels[result.category]}운 · ${result.content.score}점`,
+            description: result.content.message,
+            imageUrl: `${location.origin}/images/figma/clover.png`,
+            link: { mobileWebUrl: url, webUrl: url },
+          },
+          buttons: [{ title: '행운 확인하기', link: { mobileWebUrl: url, webUrl: url } }],
+        });
+      } else if (typeof navigator.share === 'function') {
+        // Invoke immediately in the click handler, without awaiting preparation.
+        await navigator.share({
+          title: `오늘의 ${labels[result.category]}운 · Lucky Mate`,
+          text: result.content.message,
+          url,
+        });
       } else await copy();
-    } catch {
-      notify('공유 링크를 만들지 못했어요. 다시 시도해주세요.');
+    } catch (e) {
+      if (!(e instanceof Error && e.name === 'AbortError'))
+        notify('카카오톡 공유를 열지 못했어요. 링크 복사로 보내주세요.');
     } finally {
       setBusy(false);
     }
   };
-  const copy = async () => {
+  const shareInstagram = async () => {
+    if (busy || !imageReady) return;
+    const file = shareCard!.file;
+    setBusy(true);
     try {
-      const url = await createShare();
-      await navigator.clipboard.writeText(url);
-      notify('행운 링크를 복사했어요.');
-    } catch {
-      notify('링크를 복사할 수 없어요. 브라우저 권한을 확인해주세요.');
+      if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] }))
+        await navigator.share({ files: [file] });
+      else {
+        downloadImage(file);
+        notify('이미지를 저장한 뒤 인스타그램에서 스토리에 추가해주세요.');
+      }
+    } catch (e) {
+      if (!(e instanceof Error && e.name === 'AbortError'))
+        notify('이미지 공유를 열지 못했어요. 이미지 저장 후 스토리에 추가해주세요.');
+    } finally {
+      setBusy(false);
     }
   };
-  const saveImage = async () => {
-    if (!result) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 1100;
-    const c = canvas.getContext('2d');
-    if (!c) return;
-    const gradient = c.createLinearGradient(0, 0, 900, 1100);
-    gradient.addColorStop(0, '#058745');
-    gradient.addColorStop(1, '#13c86b');
-    c.fillStyle = gradient;
-    c.fillRect(0, 0, 900, 1100);
-    c.fillStyle = '#dbffe9';
-    c.font = '28px sans-serif';
-    c.fillText(`LUCKY MATE  ·  ${result.fortune_date}`, 70, 90);
-    c.fillStyle = 'white';
-    c.font = 'bold 45px sans-serif';
-    c.fillText(`${labels[result.category]}운 · ${result.content.score}점`, 70, 175);
-    const chars = [...result.content.message];
-    c.font = 'bold 36px sans-serif';
-    let line = '',
-      y = 260;
-    for (const ch of chars) {
-      if (c.measureText(line + ch).width > 750) {
-        c.fillText(line, 70, y);
-        y += 60;
-        line = '';
-      }
-      line += ch;
+  const saveImage = () => {
+    if (!imageReady) return;
+    try {
+      downloadImage(shareCard!.file);
+      notify('이미지 저장을 요청했어요. 다운로드 또는 사진 앱을 확인해주세요.');
+    } catch {
+      notify('이미지를 저장하지 못했어요. 다른 브라우저에서 시도해주세요.');
     }
-    c.fillText(line, 70, y);
-    const image = new Image();
-    image.src = '/images/figma/clover.png';
-    await image.decode();
-    c.drawImage(image, 240, 500, 396, 420);
-    c.font = '28px sans-serif';
-    c.fillText(
-      `행운 숫자 ${result.lucky_number}  ·  ${colors.find((x) => x[0] === result.lucky_color)?.[1]}`,
-      70,
-      1020,
-    );
-    const a = document.createElement('a');
-    a.download = `lucky-mate-${result.fortune_date}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-    notify('행운 카드를 저장했어요.');
   };
   const backHome = () => {
     fortuneRequest.current?.abort();
@@ -343,28 +371,33 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
   );
   const shareOptions = (
     <div className="share-options">
-      <button onClick={() => void shareResult()} title="기기 공유 메뉴에서 카카오톡을 선택하세요">
+      <button
+        disabled={busy || !linkReady}
+        onClick={() => void shareKakao()}
+        title="카카오톡으로 행운 보내기"
+      >
         <span className="yellow">
           <img src="/images/figma/kakao.svg" alt="" />
         </span>
         카카오톡
       </button>
       <button
-        onClick={() => void shareResult()}
-        title="기기 공유 메뉴를 열어요. 미지원 기기에서는 링크를 복사해요"
+        disabled={busy || !imageReady}
+        onClick={() => void shareInstagram()}
+        title="운세 이미지를 공유하고 Instagram을 선택하세요"
       >
         <span className="pink">
           <img src="/images/figma/story.svg" alt="" />
         </span>
-        스토리
+        인스타그램
       </button>
-      <button onClick={() => void copy()}>
+      <button disabled={busy || !linkReady} onClick={() => void copy()}>
         <span className="mint">
           <img src="/images/figma/link.svg" alt="" />
         </span>
         링크 복사
       </button>
-      <button onClick={() => void saveImage().catch(() => notify('이미지를 저장하지 못했어요.'))}>
+      <button disabled={busy || !imageReady} onClick={saveImage}>
         <span className="blue">
           <img src="/images/figma/download.svg" alt="" />
         </span>
@@ -446,6 +479,13 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
       onKeyDown={(event) => event.currentTarget.setAttribute('data-keyboard', 'true')}
       onPointerDown={(event) => event.currentTarget.removeAttribute('data-keyboard')}
     >
+      {process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY && (
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js"
+          integrity="sha384-oroumrnFVE0xtgqyDZJARgERibXg2C28380uaUZz2kHDS5CR7tu20eGiOU6GkTpy"
+          crossOrigin="anonymous"
+        />
+      )}
       <main className={`phone ${screen === 'entry' ? 'entry-screen' : ''}`}>
         {demo && <div className="demo-banner">로컬 미리보기 · Supabase 연결 전</div>}
         {screen === 'checking' && (
@@ -536,14 +576,16 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
               깨어나고 있어요
             </h1>
             <p>반짝임이 모두 모이면 오늘의 행운을 만나요!</p>
-            <div className="entry-orbit">
-              <img className="entry-outer" src="/images/figma/entry-outer.svg" alt="" />
-              <img className="entry-middle" src="/images/figma/entry-middle.svg" alt="" />
-              <img className="entry-core" src="/images/figma/entry-core.svg" alt="" />
-              <Clover className="entry" />
-              <img className="orbit-star" src="/images/figma/entry-sparkles.svg" alt="" />
-              <img className="orbit-sparkle" src="/images/figma/entry-sparkle.svg" alt="" />
-              <img className="orbit-small-star" src="/images/figma/entry-star.svg" alt="" />
+            <div className="luck-stage">
+              <div className="entry-orbit">
+                <img className="entry-outer" src="/images/figma/entry-outer.svg" alt="" />
+                <img className="entry-middle" src="/images/figma/entry-middle.svg" alt="" />
+                <img className="entry-core" src="/images/figma/entry-core.svg" alt="" />
+                <Clover className="entry" />
+                <img className="orbit-star" src="/images/figma/entry-sparkles.svg" alt="" />
+                <img className="orbit-sparkle" src="/images/figma/entry-sparkle.svg" alt="" />
+                <img className="orbit-small-star" src="/images/figma/entry-star.svg" alt="" />
+              </div>
             </div>
             <div className="entry-bottom">
               <div className="progress">
@@ -653,19 +695,21 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
                 조금만 기다려주세요.
               </p>
             </div>
-            <div className="reveal-orbit">
-              <img className="dashed-orbit" src="/images/figma/loading-orbit.png" alt="" />
-              <img className="loading-glow" src="/images/figma/loading-glow.svg" alt="" />
-              <Clover className="loading" />
-              <img className="orbit-star" src="/images/figma/entry-sparkles.svg" alt="" />
-              <img className="orbit-sparkle" src="/images/figma/entry-sparkle.svg" alt="" />
-              <img className="orbit-small-star" src="/images/figma/entry-star.svg" alt="" />
-              <span className="floating-heart">
-                <img src="/images/figma/orbit-heart.svg" alt="" />
-              </span>
-              <span className="floating-star">
-                <img src="/images/figma/orbit-star.svg" alt="" />
-              </span>
+            <div className="luck-stage">
+              <div className="reveal-orbit">
+                <img className="dashed-orbit" src="/images/figma/loading-orbit.png" alt="" />
+                <img className="loading-glow" src="/images/figma/loading-glow.svg" alt="" />
+                <Clover className="loading" />
+                <img className="orbit-star" src="/images/figma/entry-sparkles.svg" alt="" />
+                <img className="orbit-sparkle" src="/images/figma/entry-sparkle.svg" alt="" />
+                <img className="orbit-small-star" src="/images/figma/entry-star.svg" alt="" />
+                <span className="floating-heart">
+                  <img src="/images/figma/orbit-heart.svg" alt="" />
+                </span>
+                <span className="floating-star">
+                  <img src="/images/figma/orbit-star.svg" alt="" />
+                </span>
+              </div>
             </div>
             <div className="loading-bottom">
               <div className="progress">
@@ -745,6 +789,35 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
             </div>
             <h3 className="shared-heading">친구에게 행운 보내기</h3>
             {shareOptions}
+            <div className="share-help">
+              <p role="status">
+                {shareError ||
+                  imageError ||
+                  (!linkReady || !imageReady
+                    ? '공유할 링크와 이미지를 준비하고 있어요…'
+                    : '카카오톡은 공유 메뉴에서, 인스타그램은 이미지 공유 메뉴에서 앱을 선택해주세요.')}
+              </p>
+              <p>
+                인스타그램이 목록에 없으면 이미지를 저장해 스토리에 올려주세요. 링크는 ‘링크 복사’
+                후 스토리 링크 스티커에 붙여넣을 수 있어요.
+              </p>
+              {(shareError || imageError) && (
+                <button
+                  className="button secondary"
+                  onClick={() => setShareAttempt((value) => value + 1)}
+                >
+                  공유 다시 준비하기
+                </button>
+              )}
+              {linkReady && (
+                <input
+                  aria-label="공유 링크"
+                  value={shareLink!.url}
+                  readOnly
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              )}
+            </div>
             <div className="result-actions">
               {button(
                 '나도 럭키메이트 갖기',
