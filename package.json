@@ -1,0 +1,32 @@
+{
+  "name": "lucky-mate",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:local": "node scripts/dev-local.cjs",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "seed": "tsx scripts/seed.ts",
+    "test:api": "tsx scripts/api-smoke.ts",
+    "format": "prettier --write app components lib scripts tests docs package.json tsconfig.json next.config.ts vercel.json"
+  },
+  "dependencies": {
+    "lucide-react": "1.52.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}

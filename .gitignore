@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example
+.local/
+.playwright-mcp/
+*.tsbuildinfo
+test-results/
