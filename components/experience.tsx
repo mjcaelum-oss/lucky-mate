@@ -27,7 +27,24 @@ export function CategoryIcon({ category }: { category: Category }) {
           (event.currentTarget.nextElementSibling as HTMLElement).hidden = false;
         }}
       />
-      <span hidden>{emoji[category]}</span>
+      <span className="category-fallback" hidden>
+        {category === 'LOVE' ? (
+          <>
+            <img
+              className="category-love-art"
+              src="/images/figma/category-love.svg"
+              alt=""
+              onError={(event) => {
+                event.currentTarget.hidden = true;
+                (event.currentTarget.nextElementSibling as HTMLElement).hidden = false;
+              }}
+            />
+            <span hidden>{emoji[category]}</span>
+          </>
+        ) : (
+          emoji[category]
+        )}
+      </span>
     </span>
   );
 }
@@ -453,7 +470,12 @@ export default function Experience({ path, localDemo }: { path: string[]; localD
         <p>{result.content.message.split('. ').slice(1).join('. ')}</p>
       </article>
       <article className="mission-card">
-        <h3>오늘의 행운 미션</h3>
+        <h3>
+          <span className="mission-flag">
+            <img src="/images/figma/mission-flag.svg" alt="" />
+          </span>
+          오늘의 행운 미션
+        </h3>
         <p>{result.content.mission}</p>
       </article>
       <article className="detail-card">

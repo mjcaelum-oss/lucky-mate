@@ -72,3 +72,11 @@ Windows 제한 환경에서 Next.js native compiler의 경로 canonicalization�
 - 인스타그램 파일 공유에 1080×1920 PNG 한 장만 전달됨을 확인하고 생성 이미지도 육안 검사했다. 공유 취소, 공유 권한 오류, 파일 공유 미지원 시 다운로드, 클립보드 거부 시 수동 URL 복사 안내를 확인했다.
 - 전체 테스트 14개, TypeScript 및 production build 통과. 캡처와 검사 결과는 `.local/screenshots/entry-320x568.png`, `.local/screenshots/loading-320x568.png`, `.local/screenshots/instagram-card.png`, `.local/mobile-report.json`에 있다.
 - 실물 iPhone/Android에서 카카오 메시지 발송과 Instagram 스토리 게시 완료는 확인하지 않았다. 공유 목록·파일 공유 지원은 설치된 앱과 브라우저에 따라 달라진다.
+
+## S02 하트·S04 깃발 원본 적용 (2026-10-09)
+
+- 사용자가 직접 내려받은 `heart-dynamic-color.svg`, `flag-dynamic-clay.svg`를 각각 `public/images/figma/category-love.svg`, `mission-flag.svg`로 이름만 정리했다. SVG 내용과 원본 1000×1000 크기는 유지했다.
+- S02 연애 항목에 원본 하트를 기본 표시하고 기존 `icon-love.png` 교체 경로를 유지했다. 사용자 PNG가 있으면 우선 표시하고, 읽히지 않으면 SVG, SVG도 읽히지 않으면 하트 이모지를 표시한다.
+- S04 미션 제목 앞에 깃발을 추가했다. 기존 제목 앞 여백을 아이콘 24px·간격 7px로 대체했다.
+- 실제 Chrome 모바일 화면에서 하트 34×34px·깃발 24×24px, 원본 로드 완료와 미션 제목 높이 24px를 검사했다. S02/S04 캡처(`.local/screenshots/home-390x844.png`, `result-390x844.png`)를 육안 확인했다. 기존 모바일 높이·공유 시나리오도 통과했다.
+- 테스트 14개, TypeScript, production build 및 공백 오류 검사 통과. 실기기의 카카오 메시지 발송·Instagram 게시 완료는 이 에셋 검증에 포함하지 않았다.

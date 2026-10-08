@@ -73,7 +73,16 @@ test('S02 icons use the documented PNG names and fall back when the image fails'
     const icon = CategoryIcon({ category });
     const [image, fallback] = icon.props.children;
     assert.equal(image.props.src, `/images/${filename}`);
-    assert.equal(fallback.props.children, emoji);
+    if (category === 'LOVE') {
+      const [image, emojiFallback] = fallback.props.children.props.children;
+      assert.equal(image.props.src, '/images/figma/category-love.svg');
+      assert.equal(emojiFallback.props.children, emoji);
+      const sibling = { hidden: true };
+      const target = { hidden: false, nextElementSibling: sibling };
+      image.props.onError({ currentTarget: target });
+      assert.equal(target.hidden, true);
+      assert.equal(sibling.hidden, false);
+    } else assert.equal(fallback.props.children, emoji);
     assert.equal(fallback.props.hidden, true);
     const sibling = { hidden: true };
     const target = { hidden: false, nextElementSibling: sibling };

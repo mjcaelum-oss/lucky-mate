@@ -461,6 +461,26 @@ img {
 .category-emoji[data-category='LOVE'] {
   font-size: 31px;
 }
+.category-fallback {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+}
+.category-fallback[hidden] {
+  display: none;
+}
+.category-emoji .category-love-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 1000px;
+  transform: scale(0.034);
+  transform-origin: top left;
+}
 .leaf-card h2 {
   font-size: 18px;
   font-weight: 800;
@@ -801,7 +821,24 @@ img {
   color: white;
 }
 .mission-card h3 {
-  padding-left: 31px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mission-flag {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.mission-flag img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 1000px;
+  transform: scale(0.024);
+  transform-origin: top left;
 }
 .mission-card p {
   margin-top: 12px;
