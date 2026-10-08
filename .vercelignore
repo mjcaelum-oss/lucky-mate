@@ -1,0 +1,10 @@
+PRD.pdf
+Lucky Mate_design.png
+.env*
+.local/
+docs/
+tests/
+scripts/
+supabase/
+AGENTS.md
+*.tsbuildinfo

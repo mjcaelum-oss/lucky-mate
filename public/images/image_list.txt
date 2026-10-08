@@ -1,0 +1,6 @@
+icon-money.png
+icon-love.png
+icon-work.png
+icon-luck.png
+
+##투명 배경 정사각형 이미지
